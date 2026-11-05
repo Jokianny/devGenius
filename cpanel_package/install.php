@@ -18,7 +18,7 @@ $lockFile = __DIR__ . '/installed.lock';
 $configFile = __DIR__ . '/includes/config.php';
 $sqlFile = file_exists(__DIR__ . '/database.sql') 
     ? __DIR__ . '/database.sql' 
-    : (file_exists(__DIR__ . '/../database.sql') ? __DIR__ . '/../database.sql' : null);
+    : (file_exists(__DIR__ . '/cpanel_package/database.sql') ? __DIR__ . '/cpanel_package/database.sql' : null);
 
 $isAlreadyInstalled = file_exists($lockFile);
 

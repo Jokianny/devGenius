@@ -4,13 +4,18 @@
 # Apache 2.4+ & 2.2 compatible | PHP-FPM & mod_php safe
 # ==============================================================================
 
-# 1. Prevent Directory Browsing
+# 1. Prevent Directory Browsing & Force PHP as Primary Entry Point
 Options -Indexes
+DirectoryIndex index.php index.html
 
-# 2. Symlinks compatibility (Safe on hardened shared hosts)
+# 2. Symlinks compatibility & PHP routing
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteBase /
+
+    # If someone accesses index.html directly on Apache, redirect to index.php
+    RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /index\.html\ HTTP/ [NC]
+    RewriteRule ^index\.html$ index.php [R=301,L]
 
     # Redirect trailing slashes if not a directory
     RewriteCond %{REQUEST_FILENAME} !-d
@@ -40,6 +45,7 @@ Options -Indexes
 </IfModule>
 
 # 5. PHP INI directives (Wrapped in mod_php to prevent 500 error on PHP-FPM servers)
+# Note: For PHP-FPM (standard in DirectAdmin & modern cPanel), settings are in .user.ini
 <IfModule mod_php.c>
     php_value upload_max_filesize 32M
     php_value post_max_size 32M

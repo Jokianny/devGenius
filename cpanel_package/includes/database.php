@@ -46,31 +46,39 @@ class Database {
                 <html lang='en'>
                 <head>
                     <meta charset='UTF-8'>
-                    <title>Database Connection Error - DevGenius Academy</title>
+                    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                    <title>Database Setup Required - DevGenius Academy</title>
                     <style>
-                        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #F8FAFC; color: #1E293B; padding: 40px 20px; line-height: 1.6; }
-                        .card { max-width: 650px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+                        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #F2F6FF; color: #1E293B; padding: 40px 20px; line-height: 1.6; }
+                        .card { max-width: 650px; margin: 0 auto; background: #fff; padding: 32px; border-radius: 20px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px rgba(6,26,58,0.08); }
+                        .logo { font-size: 20px; font-weight: 800; color: #061A3A; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+                        .logo span { background: #F28C18; color: #fff; padding: 2px 8px; border-radius: 6px; font-size: 12px; }
                         h2 { color: #082592; margin-top: 0; font-size: 22px; }
-                        .code { background: #0F172A; color: #F1F5F9; padding: 12px 16px; border-radius: 8px; font-family: monospace; font-size: 13px; overflow-x: auto; margin: 15px 0; }
-                        .tips { background: #EFF6FF; border-left: 4px solid #1D4ED8; padding: 12px 16px; margin-top: 20px; border-radius: 0 8px 8px 0; font-size: 13px; }
+                        .code { background: #061A3A; color: #F1F5F9; padding: 14px 18px; border-radius: 12px; font-family: monospace; font-size: 13px; overflow-x: auto; margin: 15px 0; border-left: 4px solid #F28C18; }
+                        .tips { background: #EFF6FF; border-left: 4px solid #1746C5; padding: 14px 18px; margin-top: 20px; border-radius: 0 12px 12px 0; font-size: 13px; }
                         ol { padding-left: 20px; font-size: 13px; }
                         li { margin-bottom: 8px; }
+                        .btn { display: inline-block; padding: 12px 24px; background: #F28C18; color: #fff; text-decoration: none; font-weight: 700; border-radius: 10px; font-size: 13px; margin-top: 15px; }
+                        .btn:hover { background: #d9770e; }
                     </style>
                 </head>
                 <body>
                     <div class='card'>
-                        <h2>DevGenius Academy — Database Connection Issue</h2>
-                        <p>The application could not connect to your MySQL database with the credentials provided in <code>includes/config.php</code>.</p>
+                        <div class='logo'>DEVGENIUS <span>ACADEMY</span></div>
+                        <h2>Database Connection Issue</h2>
+                        <p>DevGenius Academy could not connect to MySQL using the settings in <code>includes/config.php</code>.</p>
                         
                         <div class='code'>$errMsg</div>
+
+                        <p><strong>To resolve this automatically:</strong></p>
+                        <a href='install.php' class='btn'>Run Automatic Database Installer →</a>
 
                         <div class='tips'>
                             <strong>Quick Shared Hosting Checks (cPanel & DirectAdmin):</strong>
                             <ol>
+                                <li>Ensure you ran <code>install.php</code> which automatically imports tables and configures <code>includes/config.php</code>.</li>
                                 <li><strong>cPanel:</strong> Verify database name is prefixed with your cPanel username (e.g. <code>{$dbName}</code>) and your user has <strong>ALL PRIVILEGES</strong> assigned.</li>
-                                <li><strong>DirectAdmin:</strong> Go to <strong>MySQL Management</strong>, confirm the user exists and has access to the database.</li>
-                                <li><strong>phpMyAdmin:</strong> Ensure you imported <code>database.sql</code> into this database.</li>
-                                <li>Edit <code>includes/config.php</code> via File Manager to update <code>DB_USER</code> and <code>DB_PASS</code>.</li>
+                                <li><strong>DirectAdmin:</strong> Go to <strong>MySQL Management</strong>, confirm the database and user are created.</li>
                             </ol>
                         </div>
                     </div>

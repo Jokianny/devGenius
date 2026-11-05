@@ -3,6 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // On live Apache shared hosting (cPanel / DirectAdmin), instantly redirect to index.php
+      if (typeof window !== 'undefined' && window.location.port !== '3000' && window.location.port !== '5173' && !window.location.hostname.includes('run.app')) {
+        window.location.replace('index.php');
+      }
+    </script>
     <title>DevGenius Academy | Build Your Future With Modern Tech Skills</title>
     <meta name="description" content="Gain practical digital skills, learn from experienced instructors, and develop expertise in Web Development, Python, UI/UX, and Data Science." />
     <meta property="og:title" content="DevGenius Academy | Professional E-Learning Platform" />

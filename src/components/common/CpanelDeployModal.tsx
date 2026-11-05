@@ -9,6 +9,21 @@ import rawDatabaseSql from '@/database.sql?raw';
 import rawInstallPhp from '@/install.php?raw';
 import rawHtaccess from '@/.htaccess?raw';
 import rawUserIni from '@/.user.ini?raw';
+import rawIndexPhp from '@/index.php?raw';
+import rawCoursesPhp from '@/courses.php?raw';
+import rawCourseDetailsPhp from '@/course-details.php?raw';
+import rawLoginPhp from '@/login.php?raw';
+import rawRegisterPhp from '@/register.php?raw';
+import rawLogoutPhp from '@/logout.php?raw';
+import rawHeaderPhp from '@/includes/header.php?raw';
+import rawFooterPhp from '@/includes/footer.php?raw';
+import rawAuthPhp from '@/includes/auth.php?raw';
+import rawDatabasePhp from '@/includes/database.php?raw';
+import rawStudentDashboardPhp from '@/student/dashboard.php?raw';
+import rawStudentAssignmentsPhp from '@/student/assignments.php?raw';
+import rawAdminDashboardPhp from '@/admin/dashboard.php?raw';
+import rawAdminCoursesPhp from '@/admin/courses.php?raw';
+import rawAdminStudentsPhp from '@/admin/students.php?raw';
 
 interface CpanelDeployModalProps {
   isOpen: boolean;
@@ -152,8 +167,8 @@ Options -Indexes
 
       // Root files
       zip.file('database.sql', sqlSample);
-      zip.file('.htaccess', htaccessSample);
-      zip.file('.user.ini', `upload_max_filesize = 32M\npost_max_size = 32M\nmemory_limit = 256M\nsession.cookie_httponly = 1\n`);
+      zip.file('.htaccess', rawHtaccess);
+      zip.file('.user.ini', rawUserIni);
       zip.file('README.md', `# DevGenius Academy - Automatic Deployment Package\nCompatible with cPanel & DirectAdmin.\nVisit /install.php on your server to auto-configure.`);
 
       // install.php automatic installer script
@@ -167,32 +182,37 @@ Options -Indexes
       }
 
       // PHP index and core files
-      zip.file('index.php', `<?php\nif (!file_exists(__DIR__ . '/installed.lock') && file_exists(__DIR__ . '/install.php')) { header("Location: install.php"); exit; }\nrequire_once __DIR__ . '/includes/header.php';\n?>\n<div class="p-8 text-center"><h1 class="text-2xl font-bold">Welcome to DevGenius Academy</h1><p class="text-sm text-slate-500 mt-2">Shared Hosting Active.</p></div>\n<?php require_once __DIR__ . '/includes/footer.php'; ?>`);
-      zip.file('login.php', `<?php require_once __DIR__ . '/includes/header.php'; ?><h1>Sign In</h1><?php require_once __DIR__ . '/includes/footer.php'; ?>`);
-      zip.file('register.php', `<?php require_once __DIR__ . '/includes/header.php'; ?><h1>Register</h1><?php require_once __DIR__ . '/includes/footer.php'; ?>`);
-      zip.file('courses.php', `<?php require_once __DIR__ . '/includes/header.php'; ?><h1>Courses</h1><?php require_once __DIR__ . '/includes/footer.php'; ?>`);
-      zip.file('course-details.php', `<?php require_once __DIR__ . '/includes/header.php'; ?><h1>Course Details</h1><?php require_once __DIR__ . '/includes/footer.php'; ?>`);
+      zip.file('index.php', rawIndexPhp);
+      zip.file('login.php', rawLoginPhp);
+      zip.file('register.php', rawRegisterPhp);
+      zip.file('courses.php', rawCoursesPhp);
+      zip.file('course-details.php', rawCourseDetailsPhp);
+      zip.file('logout.php', rawLogoutPhp);
 
       // Includes folder
       const includes = zip.folder('includes');
       if (includes) {
         includes.file('config.php', useSimCreds ? getCustomConfig() : getCustomConfig('localhost', 'cpaneluser_academy', 'cpaneluser_aca_user', 'Password123!'));
-        includes.file('database.php', `<?php\nrequire_once __DIR__ . '/config.php';\nclass Database {\n    private static ?PDO $instance = null;\n    public static function connect(): PDO {\n        if (self::$instance === null) {\n            $dsn = "mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;\n            try {\n                self::$instance = new PDO($dsn, DB_USER, DB_PASS, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);\n            } catch (PDOException $e) {\n                if (DB_HOST === 'localhost') {\n                    self::$instance = new PDO("mysql:host=127.0.0.1;port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET, DB_USER, DB_PASS, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);\n                }\n            }\n        }\n        return self::$instance;\n    }\n}`);
-        includes.file('header.php', `<?php require_once __DIR__ . '/config.php'; ?><!DOCTYPE html><html><head><script src="https://cdn.tailwindcss.com"></script><title><?= APP_NAME ?></title></head><body class="bg-slate-50">`);
-        includes.file('footer.php', `</body></html>`);
+        includes.file('database.php', rawDatabasePhp);
+        includes.file('auth.php', rawAuthPhp);
+        includes.file('header.php', rawHeaderPhp);
+        includes.file('footer.php', rawFooterPhp);
       }
 
       // Student and Admin folders
       const student = zip.folder('student');
       if (student) {
-        student.file('dashboard.php', `<?php require_once __DIR__ . '/../includes/header.php'; ?><h1>Student Dashboard</h1>`);
-        student.file('assignments.php', `<?php require_once __DIR__ . '/../includes/header.php'; ?><h1>Assignments</h1>`);
+        student.file('dashboard.php', rawStudentDashboardPhp);
+        student.file('assignments.php', rawStudentAssignmentsPhp);
       }
 
       const admin = zip.folder('admin');
       if (admin) {
-        admin.file('dashboard.php', `<?php require_once __DIR__ . '/../includes/header.php'; ?><h1>Administrator Dashboard</h1>`);
+        admin.file('dashboard.php', rawAdminDashboardPhp);
+        admin.file('courses.php', rawAdminCoursesPhp);
+        admin.file('students.php', rawAdminStudentsPhp);
       }
+
 
       const blob = await zip.generateAsync({ type: 'blob' });
       const url = URL.createObjectURL(blob);

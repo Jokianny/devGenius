@@ -1,4 +1,8 @@
 <?php
+/**
+ * DevGenius Academy - Authentication & Security Helpers
+ */
+
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/database.php';
 
@@ -6,16 +10,20 @@ function get_current_user_account(): ?array {
     if (empty($_SESSION['user_id'])) {
         return null;
     }
-    $pdo = Database::connect();
-    $stmt = $pdo->prepare("SELECT id, full_name, email, phone, role, avatar, bio, created_at FROM users WHERE id = ?");
-    $stmt->execute([$_SESSION['user_id']]);
-    return $stmt->fetch() ?: null;
+    try {
+        $pdo = Database::connect();
+        $stmt = $pdo->prepare("SELECT id, full_name, email, phone, role, avatar, bio, created_at FROM users WHERE id = ?");
+        $stmt->execute([$_SESSION['user_id']]);
+        return $stmt->fetch() ?: null;
+    } catch (Exception $e) {
+        return null;
+    }
 }
 
 function require_student(): array {
     $user = get_current_user_account();
     if (!$user) {
-        header("Location: ../login.php?redirect=" . urlencode($_SERVER['REQUEST_URI']));
+        header("Location: ../login.php?redirect=" . urlencode($_SERVER['REQUEST_URI'] ?? ''));
         exit;
     }
     return $user;
@@ -44,6 +52,7 @@ function verify_csrf_token(?string $token): bool {
     return hash_equals($_SESSION['csrf_token'], $token);
 }
 
-function sanitize(string $data): string {
+function sanitize(?string $data): string {
+    if ($data === null) return '';
     return htmlspecialchars(trim($data), ENT_QUOTES, 'UTF-8');
 }

@@ -1,0 +1,6 @@
+{
+  "name": "DevGenius Academy - E-Learning Platform & Student Portal",
+  "description": "Professional modern e-learning website, student registration portal, and cPanel-ready PHP/MySQL learning management system.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

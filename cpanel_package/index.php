@@ -1,4 +1,10 @@
 <?php
+// Auto-detect if installer should be run
+if (!file_exists(__DIR__ . '/installed.lock') && file_exists(__DIR__ . '/install.php')) {
+    header("Location: install.php");
+    exit;
+}
+
 $pageTitle = 'Home';
 require_once __DIR__ . '/includes/header.php';
 

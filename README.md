@@ -4,7 +4,24 @@ This documentation provides complete, production-tested instructions for deployi
 
 ---
 
-## 1. System Requirements
+## ⚡ 1. QUICKEST METHOD: Automatic Web-Based Installer
+
+DevGenius Academy includes a built-in **Automatic Web Installer** (`install.php`) that removes all manual SQL imports and config edits:
+
+1. **Upload Files:** Upload the project zip into `public_html` (cPanel) or `domains/yourdomain.com/public_html` (DirectAdmin) and extract.
+2. **Open Your Website:** Visit your website in any web browser (`https://yourdomain.com/` or `https://yourdomain.com/install.php`).
+3. **Enter Database Credentials:**
+   * **Database Name** (e.g. `cpaneluser_academy`)
+   * **Database Username** (e.g. `cpaneluser_aca_user`)
+   * **Database Password**
+4. **Click "Test Connection & Auto-Install Database":**
+   * The installer automatically tests connectivity.
+   * If correct, it automatically finds `database.sql`, imports all 8 tables and sample curriculum, generates and writes `includes/config.php`, and creates a security lock (`installed.lock`).
+   * You're done in 60 seconds!
+
+---
+
+## 2. System Requirements
 
 * **Web Server:** Apache 2.4+ (or LiteSpeed / OpenLiteSpeed)
 * **PHP Version:** PHP 8.1, 8.2, or 8.3 (Supported via mod_php or PHP-FPM)
@@ -14,7 +31,7 @@ This documentation provides complete, production-tested instructions for deployi
 
 ---
 
-## 2. Server Architecture Differences (cPanel vs DirectAdmin)
+## 3. Server Architecture Differences (cPanel vs DirectAdmin)
 
 | Feature | cPanel Hosting | DirectAdmin Hosting |
 |---|---|---|

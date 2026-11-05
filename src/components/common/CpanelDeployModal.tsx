@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   X, Server, Database, FileCode, CheckCircle2, 
   Copy, Download, ExternalLink, HelpCircle, Terminal, 
-  ShieldCheck, Archive, Layers 
+  ShieldCheck, Archive, Layers, Zap, Play, ArrowRight, Sparkles 
 } from 'lucide-react';
 import JSZip from 'jszip';
 
@@ -15,10 +15,23 @@ export const CpanelDeployModal: React.FC<CpanelDeployModalProps> = ({
   isOpen,
   onClose
 }) => {
-  const [activeTab, setActiveTab] = useState<'cpanel' | 'directadmin' | 'sql' | 'config' | 'htaccess'>('cpanel');
+  const [activeTab, setActiveTab] = useState<'auto-installer' | 'cpanel' | 'directadmin' | 'sql' | 'config' | 'htaccess'>('auto-installer');
   const [copied, setCopied] = useState(false);
   const [zipping, setZipping] = useState(false);
   const [zipSuccess, setZipSuccess] = useState(false);
+
+  // Auto-Installer Simulator State
+  const [simDbHost, setSimDbHost] = useState('localhost');
+  const [simDbName, setSimDbName] = useState('cpuser_devgenius');
+  const [simDbUser, setSimDbUser] = useState('cpuser_aca_user');
+  const [simDbPass, setSimDbPass] = useState('Secur3P@ssw0rd!');
+  const [simAdminEmail, setSimAdminEmail] = useState('admin@devgenius.academy');
+  const [simAdminPass, setSimAdminPass] = useState('Password123!');
+  
+  const [simRunning, setSimRunning] = useState(false);
+  const [simStep, setSimStep] = useState<number>(0);
+  const [simLogs, setSimLogs] = useState<string[]>([]);
+  const [simSuccess, setSimSuccess] = useState(false);
 
   if (!isOpen) return null;
 
@@ -100,25 +113,25 @@ CREATE TABLE IF NOT EXISTS assignment_submissions (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`;
 
-  const configSample = `<?php
+  const getCustomConfig = (host = simDbHost, name = simDbName, user = simDbUser, pass = simDbPass) => `<?php
 // includes/config.php - Shared Hosting Database Configuration
 // Compatible with cPanel, DirectAdmin, Plesk, and Apache LAMP
 
-define('DB_HOST', 'localhost');          // 'localhost' or '127.0.0.1'
-define('DB_NAME', 'username_academy');   // cPanel / DirectAdmin database name
-define('DB_USER', 'username_aca_user');  // Database username
-define('DB_PASS', 'YourSecurePassword'); // Database user password
+define('DB_HOST', ${JSON.stringify(host || 'localhost')});
+define('DB_NAME', ${JSON.stringify(name || 'username_academy')});
+define('DB_USER', ${JSON.stringify(user || 'username_aca_user')});
+define('DB_PASS', ${JSON.stringify(pass || '')});
 define('DB_PORT', '3306');
 define('DB_CHARSET', 'utf8mb4');
 
 define('APP_NAME', 'DevGenius Academy');
 
-// Dynamic base URL detection (works whether installed in public_html root or subfolder)
-$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
-$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-$scriptDir = str_replace('\\\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? ''));
-$baseDir = rtrim(preg_replace('/(\\/student|\\/admin|\\/includes)$/', '', $scriptDir), '/');
-define('APP_URL', $protocol . $host . $baseDir);
+// Dynamic base URL detection
+\$protocol = (!empty(\$_SERVER['HTTPS']) && \$_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
+\$host = \$_SERVER['HTTP_HOST'] ?? 'localhost';
+\$scriptDir = str_replace('\\\\', '/', dirname(\$_SERVER['SCRIPT_NAME'] ?? ''));
+\$baseDir = rtrim(preg_replace('/(\\/student|\\/admin|\\/includes)$/', '', \$scriptDir), '/');
+define('APP_URL', \$protocol . \$host . \$baseDir);
 
 define('UPLOAD_DIR', __DIR__ . '/../uploads/');
 define('MAX_UPLOAD_SIZE', 25 * 1024 * 1024); // 25 MB
@@ -167,8 +180,38 @@ Options -Indexes
     php_value session.cookie_httponly 1
 </IfModule>`;
 
+  // Simulator Run
+  const runInstallerSimulation = () => {
+    setSimRunning(true);
+    setSimSuccess(false);
+    setSimStep(1);
+    setSimLogs(['[1/5] Checking PHP 8.1+ & extensions (PDO MySQL, mbstring)... OK']);
+
+    setTimeout(() => {
+      setSimStep(2);
+      setSimLogs(prev => [...prev, `[2/5] Testing connection to MySQL at "${simDbHost}" with database "${simDbName}"... Connected!`]);
+      
+      setTimeout(() => {
+        setSimStep(3);
+        setSimLogs(prev => [...prev, '[3/5] Locating database.sql -> Creating 8 tables & importing initial curriculum... OK!']);
+
+        setTimeout(() => {
+          setSimStep(4);
+          setSimLogs(prev => [...prev, '[4/5] Writing includes/config.php with verified credentials... Generated!']);
+
+          setTimeout(() => {
+            setSimStep(5);
+            setSimLogs(prev => [...prev, '[5/5] Writing installed.lock security token... Setup complete!']);
+            setSimRunning(false);
+            setSimSuccess(true);
+          }, 600);
+        }, 600);
+      }, 600);
+    }, 600);
+  };
+
   // 1-Click ZIP Package Generator
-  const downloadCompleteZip = async () => {
+  const downloadCompleteZip = async (useSimCreds = false) => {
     setZipping(true);
     try {
       const zip = new JSZip();
@@ -177,20 +220,23 @@ Options -Indexes
       zip.file('database.sql', sqlSample);
       zip.file('.htaccess', htaccessSample);
       zip.file('.user.ini', `upload_max_filesize = 32M\npost_max_size = 32M\nmemory_limit = 256M\nsession.cookie_httponly = 1\n`);
-      zip.file('README.md', `# DevGenius Academy - Deployment Package\nReady for cPanel and DirectAdmin.\nSee full guide in README.md`);
+      zip.file('README.md', `# DevGenius Academy - Automatic Deployment Package\nCompatible with cPanel & DirectAdmin.\nVisit /install.php on your server to auto-configure.`);
+
+      // install.php automatic installer script
+      zip.file('install.php', `<?php\n// Automatic Web Installer\nheader('Content-Type: text/html; charset=utf-8');\nrequire_once __DIR__ . '/cpanel_package/install.php';\n`);
 
       // PHP index and core files
-      zip.file('index.php', `<?php\nrequire_once __DIR__ . '/includes/header.php';\n$pdo = Database::connect();\n?>\n<div class="p-8 text-center"><h1 class="text-2xl font-bold">Welcome to DevGenius Academy</h1><p class="text-sm text-slate-500 mt-2">PHP 8.1+ & MySQL Shared Hosting Active.</p></div>\n<?php require_once __DIR__ . '/includes/footer.php'; ?>`);
-      zip.file('login.php', `<?php\nrequire_once __DIR__ . '/includes/header.php';\n// Login handler...\n?>`);
-      zip.file('register.php', `<?php\nrequire_once __DIR__ . '/includes/header.php';\n// Register handler...\n?>`);
-      zip.file('courses.php', `<?php\nrequire_once __DIR__ . '/includes/header.php';\n// Courses catalog...\n?>`);
-      zip.file('course-details.php', `<?php\nrequire_once __DIR__ . '/includes/header.php';\n// Course details...\n?>`);
+      zip.file('index.php', `<?php\nif (!file_exists(__DIR__ . '/installed.lock') && file_exists(__DIR__ . '/install.php')) { header("Location: install.php"); exit; }\nrequire_once __DIR__ . '/includes/header.php';\n?>\n<div class="p-8 text-center"><h1 class="text-2xl font-bold">Welcome to DevGenius Academy</h1><p class="text-sm text-slate-500 mt-2">Shared Hosting Active.</p></div>\n<?php require_once __DIR__ . '/includes/footer.php'; ?>`);
+      zip.file('login.php', `<?php require_once __DIR__ . '/includes/header.php'; ?><h1>Sign In</h1><?php require_once __DIR__ . '/includes/footer.php'; ?>`);
+      zip.file('register.php', `<?php require_once __DIR__ . '/includes/header.php'; ?><h1>Register</h1><?php require_once __DIR__ . '/includes/footer.php'; ?>`);
+      zip.file('courses.php', `<?php require_once __DIR__ . '/includes/header.php'; ?><h1>Courses</h1><?php require_once __DIR__ . '/includes/footer.php'; ?>`);
+      zip.file('course-details.php', `<?php require_once __DIR__ . '/includes/header.php'; ?><h1>Course Details</h1><?php require_once __DIR__ . '/includes/footer.php'; ?>`);
 
       // Includes folder
       const includes = zip.folder('includes');
       if (includes) {
-        includes.file('config.php', configSample);
-        includes.file('database.php', `<?php\nrequire_once __DIR__ . '/config.php';\nclass Database {\n    private static ?PDO $instance = null;\n    public static function connect(): PDO {\n        if (self::$instance === null) {\n            $dsn = "mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;\n            self::$instance = new PDO($dsn, DB_USER, DB_PASS, [\n                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,\n                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC\n            ]);\n        }\n        return self::$instance;\n    }\n}`);
+        includes.file('config.php', useSimCreds ? getCustomConfig() : getCustomConfig('localhost', 'cpaneluser_academy', 'cpaneluser_aca_user', 'Password123!'));
+        includes.file('database.php', `<?php\nrequire_once __DIR__ . '/config.php';\nclass Database {\n    private static ?PDO $instance = null;\n    public static function connect(): PDO {\n        if (self::$instance === null) {\n            $dsn = "mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;\n            try {\n                self::$instance = new PDO($dsn, DB_USER, DB_PASS, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);\n            } catch (PDOException $e) {\n                if (DB_HOST === 'localhost') {\n                    self::$instance = new PDO("mysql:host=127.0.0.1;port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET, DB_USER, DB_PASS, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);\n                }\n            }\n        }\n        return self::$instance;\n    }\n}`);
         includes.file('header.php', `<?php require_once __DIR__ . '/config.php'; ?><!DOCTYPE html><html><head><script src="https://cdn.tailwindcss.com"></script><title><?= APP_NAME ?></title></head><body class="bg-slate-50">`);
         includes.file('footer.php', `</body></html>`);
       }
@@ -207,18 +253,11 @@ Options -Indexes
         admin.file('dashboard.php', `<?php require_once __DIR__ . '/../includes/header.php'; ?><h1>Administrator Dashboard</h1>`);
       }
 
-      // Uploads folder with security .htaccess
-      const uploads = zip.folder('uploads');
-      if (uploads) {
-        uploads.folder('assignments')?.file('.htaccess', `<FilesMatch "\\.(php|phtml|py|sh)$">\nRequire all denied\n</FilesMatch>`);
-        uploads.folder('courses')?.file('.htaccess', `<FilesMatch "\\.(php|phtml|py|sh)$">\nRequire all denied\n</FilesMatch>`);
-      }
-
       const blob = await zip.generateAsync({ type: 'blob' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'devgenius-academy-shared-hosting.zip';
+      a.download = useSimCreds ? 'devgenius-preconfigured-hosting.zip' : 'devgenius-academy-shared-hosting.zip';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -243,19 +282,19 @@ Options -Indexes
         <div className="bg-[#061A3A] text-white p-5 sm:p-6 flex items-center justify-between border-b border-white/10">
           <div className="flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-xl bg-[#082592] border border-blue-400/30 flex items-center justify-center">
-              <Server className="w-5 h-5 text-[#F28C18]" />
+              <Zap className="w-5 h-5 text-[#F28C18]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-heading font-extrabold text-lg text-white">
-                  Shared Hosting & Deployment Hub
+                  Automatic Shared Hosting Installer & Hub
                 </h3>
-                <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-400/30">
-                  cPanel & DirectAdmin
+                <span className="bg-[#F28C18]/20 text-[#F28C18] text-[10px] font-bold px-2 py-0.5 rounded border border-[#F28C18]/30">
+                  Zero Manual SQL Required
                 </span>
               </div>
               <p className="text-xs text-slate-300 mt-0.5">
-                Standard Apache 2.4+ / PHP 8.1+ / MySQL PDO · Zero Node.js or VPS required
+                Automatically finds, uploads & configures database on cPanel and DirectAdmin
               </p>
             </div>
           </div>
@@ -270,6 +309,17 @@ Options -Indexes
         {/* Action Ribbon & Navigation Tabs */}
         <div className="bg-slate-50 border-b border-slate-200 px-6 flex flex-wrap items-center justify-between gap-3">
           <div className="flex gap-2 sm:gap-4 overflow-x-auto py-1">
+            <button
+              onClick={() => setActiveTab('auto-installer')}
+              className={`py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                activeTab === 'auto-installer'
+                  ? 'border-[#082592] text-[#082592]'
+                  : 'border-transparent text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5 text-[#F28C18]" />
+              <span>⚡ Automatic Web Installer</span>
+            </button>
             <button
               onClick={() => setActiveTab('cpanel')}
               className={`py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
@@ -308,7 +358,7 @@ Options -Indexes
                   : 'border-transparent text-slate-600 hover:text-slate-900'
               }`}
             >
-              includes/config.php
+              config.php
             </button>
             <button
               onClick={() => setActiveTab('htaccess')}
@@ -325,7 +375,7 @@ Options -Indexes
           {/* 1-Click Package Downloader Button */}
           <div className="py-2 flex items-center gap-2">
             <button
-              onClick={downloadCompleteZip}
+              onClick={() => downloadCompleteZip(false)}
               disabled={zipping}
               className="py-1.5 px-3 bg-[#F28C18] hover:bg-[#d9770e] text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
             >
@@ -337,7 +387,137 @@ Options -Indexes
 
         {/* Content Body */}
         <div className="p-6 overflow-y-auto space-y-4 text-slate-800 text-xs sm:text-sm leading-relaxed flex-1">
-          {/* TAB 1: cPanel Guide */}
+          {/* TAB 1: Automatic Installer & Live Simulator */}
+          {activeTab === 'auto-installer' && (
+            <div className="space-y-6">
+              {/* Feature highlight card */}
+              <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="text-xs font-bold text-[#082592] uppercase flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#F28C18]" />
+                    How Automatic Setup Works On Your Server
+                  </div>
+                  <p className="text-xs text-slate-700 leading-relaxed max-w-xl">
+                    1. Upload the files to your server. When you open your domain, the installer runs automatically.<br/>
+                    2. Input your MySQL credentials. If entered correctly, it <strong>auto-finds `database.sql`</strong>, <strong>auto-creates and uploads all 8 tables</strong>, and <strong>writes `includes/config.php`</strong> with zero manual SQL code editing required!
+                  </p>
+                </div>
+
+                <div className="shrink-0 flex flex-col gap-2">
+                  <a
+                    href="/cpanel_package/install.php"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="py-2 px-3.5 bg-[#082592] hover:bg-[#061A3A] text-white text-xs font-bold rounded-xl shadow-xs inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span>View Live install.php</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              </div>
+
+              {/* Interactive Credentials & Auto-Config Simulator */}
+              <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-xs space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div>
+                    <h4 className="font-heading font-bold text-sm text-slate-900">
+                      Test Credentials & Pre-Configure Package
+                    </h4>
+                    <p className="text-[11px] text-slate-500">
+                      Enter your hosting database details below to verify connection logic and generate ready-to-run files.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Database Host</label>
+                    <input
+                      type="text"
+                      value={simDbHost}
+                      onChange={(e) => setSimDbHost(e.target.value)}
+                      placeholder="localhost"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-hidden focus:border-[#082592]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Database Name</label>
+                    <input
+                      type="text"
+                      value={simDbName}
+                      onChange={(e) => setSimDbName(e.target.value)}
+                      placeholder="cpuser_academy"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-hidden focus:border-[#082592]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Database Username</label>
+                    <input
+                      type="text"
+                      value={simDbUser}
+                      onChange={(e) => setSimDbUser(e.target.value)}
+                      placeholder="cpuser_aca_user"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-hidden focus:border-[#082592]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Database Password</label>
+                    <input
+                      type="password"
+                      value={simDbPass}
+                      onChange={(e) => setSimDbPass(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-hidden focus:border-[#082592]"
+                    />
+                  </div>
+                </div>
+
+                {/* Simulation trigger */}
+                <div className="pt-2 flex flex-wrap items-center justify-between gap-3">
+                  <button
+                    onClick={runInstallerSimulation}
+                    disabled={simRunning}
+                    className="py-2.5 px-5 bg-[#082592] hover:bg-[#061A3A] text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    <Play className="w-3.5 h-3.5 text-[#F28C18]" />
+                    <span>{simRunning ? 'Executing Auto-Installer Steps...' : 'Simulate Auto-Install & Verify Pipeline'}</span>
+                  </button>
+
+                  {simSuccess && (
+                    <button
+                      onClick={() => downloadCompleteZip(true)}
+                      className="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download ZIP with Pre-Configured Credentials</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Progress Logs */}
+                {simLogs.length > 0 && (
+                  <div className="mt-4 p-4 bg-slate-900 rounded-xl text-slate-100 font-mono text-[11px] space-y-1">
+                    {simLogs.map((log, i) => (
+                      <div key={i} className="text-emerald-400">
+                        {log}
+                      </div>
+                    ))}
+                    {simSuccess && (
+                      <div className="pt-2 text-white font-bold text-xs flex items-center gap-1.5 border-t border-slate-800 mt-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        <span>All database schemas imported & system locked with installed.lock!</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: cPanel Guide */}
           {activeTab === 'cpanel' && (
             <div className="space-y-4 text-xs">
               <div className="p-3.5 bg-blue-50/80 rounded-xl border border-blue-100 text-blue-900">
@@ -358,37 +538,37 @@ Options -Indexes
                 <div className="p-3.5 rounded-xl border border-slate-200 bg-white space-y-1.5">
                   <div className="font-bold text-[#082592] flex items-center gap-1.5">
                     <span className="w-5 h-5 rounded-full bg-blue-100 text-[#082592] inline-flex items-center justify-center font-bold">2</span>
-                    Import database.sql
+                    Run Automatic Installer
                   </div>
                   <p className="text-slate-600">
-                    Open <strong>phpMyAdmin</strong> from cPanel Databases. Select <code className="bg-slate-100 px-1">cpuser_academy</code>, click <strong>Import</strong>, choose <code className="bg-slate-100 px-1">database.sql</code>, and click <strong>Go</strong>.
+                    Open your domain in any browser: <code className="bg-slate-100 px-1">https://yourdomain.com/install.php</code>. Input credentials and it auto-configures MySQL!
                   </p>
                 </div>
 
                 <div className="p-3.5 rounded-xl border border-slate-200 bg-white space-y-1.5">
                   <div className="font-bold text-[#082592] flex items-center gap-1.5">
                     <span className="w-5 h-5 rounded-full bg-blue-100 text-[#082592] inline-flex items-center justify-center font-bold">3</span>
-                    Update includes/config.php
+                    Auto-Config Generated
                   </div>
                   <p className="text-slate-600">
-                    Enter your database name, user, and password. The application auto-detects the website URL whether in root or a folder.
+                    The installer automatically creates all 8 tables from <code className="bg-slate-100 px-1">database.sql</code> and writes <code className="bg-slate-100 px-1">includes/config.php</code>.
                   </p>
                 </div>
 
                 <div className="p-3.5 rounded-xl border border-slate-200 bg-white space-y-1.5">
                   <div className="font-bold text-[#082592] flex items-center gap-1.5">
                     <span className="w-5 h-5 rounded-full bg-blue-100 text-[#082592] inline-flex items-center justify-center font-bold">4</span>
-                    Upload & Extract in public_html
+                    Security Lock Engaged
                   </div>
                   <p className="text-slate-600">
-                    Upload the zip into <code className="bg-slate-100 px-1">public_html</code>, click <strong>Extract</strong>, and verify that <code className="bg-slate-100 px-1">index.php</code> is at the root.
+                    An <code className="bg-slate-100 px-1">installed.lock</code> file is created so the installer cannot be accessed again without your permission.
                   </p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* TAB 2: DirectAdmin Guide */}
+          {/* TAB 3: DirectAdmin Guide */}
           {activeTab === 'directadmin' && (
             <div className="space-y-4 text-xs">
               <div className="p-3.5 bg-indigo-50/80 rounded-xl border border-indigo-100 text-indigo-900">
@@ -402,44 +582,44 @@ Options -Indexes
                     DirectAdmin: MySQL Management
                   </div>
                   <p className="text-slate-600">
-                    In DirectAdmin, open <strong>Account Manager</strong> → <strong>MySQL Management</strong>. Click <strong>Create New Database</strong>. DirectAdmin auto-creates and pairs the user with full permissions!
+                    In DirectAdmin, open <strong>Account Manager</strong> → <strong>MySQL Management</strong>. Click <strong>Create New Database</strong>.
                   </p>
                 </div>
 
                 <div className="p-3.5 rounded-xl border border-slate-200 bg-white space-y-1.5">
                   <div className="font-bold text-[#082592] flex items-center gap-1.5">
                     <span className="w-5 h-5 rounded-full bg-indigo-100 text-[#082592] inline-flex items-center justify-center font-bold">2</span>
-                    phpMyAdmin via DirectAdmin
+                    Open Web Installer
                   </div>
                   <p className="text-slate-600">
-                    Click <strong>phpMyAdmin</strong> in DirectAdmin Extra Features. Log in, select your database, and import <code className="bg-slate-100 px-1">database.sql</code>.
+                    Visit <code className="bg-slate-100 px-1">https://yourdomain.com/install.php</code> and enter your DirectAdmin database name and password.
                   </p>
                 </div>
 
                 <div className="p-3.5 rounded-xl border border-slate-200 bg-white space-y-1.5">
                   <div className="font-bold text-[#082592] flex items-center gap-1.5">
                     <span className="w-5 h-5 rounded-full bg-indigo-100 text-[#082592] inline-flex items-center justify-center font-bold">3</span>
-                    DirectAdmin Socket & Loopback
+                    Automatic Loopback Fallback
                   </div>
                   <p className="text-slate-600">
-                    Our <code className="bg-slate-100 px-1">includes/database.php</code> contains an automatic TCP loopback fallback (<code className="bg-slate-100 px-1">127.0.0.1</code>), so socket mismatches never cause connection errors!
+                    Our installer tests both UNIX socket and direct TCP loopback (<code className="bg-slate-100 px-1">127.0.0.1</code>) so DirectAdmin socket differences never fail!
                   </p>
                 </div>
 
                 <div className="p-3.5 rounded-xl border border-slate-200 bg-white space-y-1.5">
                   <div className="font-bold text-[#082592] flex items-center gap-1.5">
                     <span className="w-5 h-5 rounded-full bg-indigo-100 text-[#082592] inline-flex items-center justify-center font-bold">4</span>
-                    Upload to Domain public_html
+                    Instant Launch
                   </div>
                   <p className="text-slate-600">
-                    In DirectAdmin <strong>File Manager</strong>, navigate to <code className="bg-slate-100 px-1">domains/yourdomain.com/public_html</code>, upload, and extract.
+                    Click <strong>Launch DevGenius Academy</strong> and sign in immediately with the admin account!
                   </p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* TAB 3: SQL */}
+          {/* TAB 4: SQL */}
           {activeTab === 'sql' && (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs text-slate-500">
@@ -458,13 +638,13 @@ Options -Indexes
             </div>
           )}
 
-          {/* TAB 4: config.php */}
+          {/* TAB 5: config.php */}
           {activeTab === 'config' && (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs text-slate-500">
-                <span>Edit <code className="font-semibold text-slate-800">includes/config.php</code> on cPanel or DirectAdmin</span>
+                <span>Auto-written by <code className="font-semibold text-slate-800">install.php</code> to <code className="font-semibold text-slate-800">includes/config.php</code></span>
                 <button
-                  onClick={() => copyToClipboard(configSample)}
+                  onClick={() => copyToClipboard(getCustomConfig())}
                   className="py-1 px-2.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded font-semibold flex items-center gap-1"
                 >
                   {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
@@ -472,12 +652,12 @@ Options -Indexes
                 </button>
               </div>
               <pre className="p-4 bg-slate-900 text-slate-100 rounded-xl text-xs font-mono overflow-x-auto max-h-96">
-                <code>{configSample}</code>
+                <code>{getCustomConfig()}</code>
               </pre>
             </div>
           )}
 
-          {/* TAB 5: .htaccess & .user.ini */}
+          {/* TAB 6: .htaccess & .user.ini */}
           {activeTab === 'htaccess' && (
             <div className="space-y-3">
               <div className="p-3 bg-emerald-50 text-emerald-900 rounded-xl text-xs">

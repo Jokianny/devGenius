@@ -89,18 +89,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isAlreadyInstalled) {
                     throw new Exception("database.sql is empty.");
                 }
 
-                // Split SQL by delimiter while respecting multi-statement safety
-                // Temporarily disable foreign key checks during import
+                // Disable foreign key checks during import to allow tables and foreign keys to link seamlessly
                 $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
 
-                // Split queries cleanly
-                $queries = preg_split('/;\s*[\r\n]+/', $sqlContent);
-                foreach ($queries as $query) {
-                    $trimmed = trim($query);
-                    // Filter comments and empty lines
-                    if (!empty($trimmed) && !str_starts_with($trimmed, '--') && !str_starts_with($trimmed, '/*')) {
-                        $pdo->exec($trimmed);
+                // Step A: Strip block comments /* ... */
+                $cleanSql = preg_replace('!/\*.*?\*/!s', '', $sqlContent);
+
+                // Step B: Strip line comments (-- or #) line-by-line so CREATE TABLE statements are never skipped
+                $lines = explode("\n", $cleanSql);
+                $filteredLines = [];
+                foreach ($lines as $line) {
+                    $trimmedLine = trim($line);
+                    if (str_starts_with($trimmedLine, '--') || str_starts_with($trimmedLine, '#')) {
+                        continue;
                     }
+                    $filteredLines[] = $line;
+                }
+                $cleanSql = implode("\n", $filteredLines);
+
+                // Step C: Split statements by semicolon while respecting string literals
+                $statements = [];
+                $currentStmt = '';
+                $inString = false;
+                $stringChar = '';
+
+                $len = strlen($cleanSql);
+                for ($i = 0; $i < $len; $i++) {
+                    $char = $cleanSql[$i];
+                    $prevChar = $i > 0 ? $cleanSql[$i - 1] : '';
+
+                    if (($char === "'" || $char === '"') && $prevChar !== '\\') {
+                        if (!$inString) {
+                            $inString = true;
+                            $stringChar = $char;
+                        } elseif ($stringChar === $char) {
+                            $inString = false;
+                        }
+                    }
+
+                    if ($char === ';' && !$inString) {
+                        $stmtToRun = trim($currentStmt);
+                        if (!empty($stmtToRun)) {
+                            $statements[] = $stmtToRun;
+                        }
+                        $currentStmt = '';
+                    } else {
+                        $currentStmt .= $char;
+                    }
+                }
+                if (!empty(trim($currentStmt))) {
+                    $statements[] = trim($currentStmt);
+                }
+
+                // Step D: Execute all parsed statements sequentially
+                foreach ($statements as $stmt) {
+                    $pdo->exec($stmt);
                 }
 
                 $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
@@ -113,6 +156,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isAlreadyInstalled) {
                 }
 
                 // Step 4: Automatically write includes/config.php
+                if (!is_dir(dirname($configFile))) {
+                    @mkdir(dirname($configFile), 0755, true);
+                }
                 $configContent = "<?php\n" .
                     "/**\n" .
                     " * DevGenius Academy - Core Configuration\n" .

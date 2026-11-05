@@ -5,6 +5,10 @@ import {
   ShieldCheck, Archive, Layers, Zap, Play, ArrowRight, Sparkles 
 } from 'lucide-react';
 import JSZip from 'jszip';
+import rawDatabaseSql from '@/database.sql?raw';
+import rawInstallPhp from '@/install.php?raw';
+import rawHtaccess from '@/.htaccess?raw';
+import rawUserIni from '@/.user.ini?raw';
 
 interface CpanelDeployModalProps {
   isOpen: boolean;
@@ -41,77 +45,7 @@ export const CpanelDeployModal: React.FC<CpanelDeployModalProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const sqlSample = `-- DEVGENIUS ACADEMY - MySQL / MariaDB Schema (InnoDB, utf8mb4)
--- Compatible with: cPanel (phpMyAdmin) & DirectAdmin (phpMyAdmin / CustomBuild)
-
-CREATE TABLE IF NOT EXISTS users (
-  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  full_name VARCHAR(150) NOT NULL,
-  email VARCHAR(191) NOT NULL UNIQUE,
-  phone VARCHAR(50) NOT NULL,
-  password VARCHAR(255) NOT NULL,
-  role ENUM('student', 'admin') NOT NULL DEFAULT 'student',
-  avatar VARCHAR(255) DEFAULT NULL,
-  bio TEXT DEFAULT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_user_role (role)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS courses (
-  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  instructor_id INT UNSIGNED DEFAULT NULL,
-  title VARCHAR(200) NOT NULL,
-  slug VARCHAR(200) NOT NULL UNIQUE,
-  category VARCHAR(100) NOT NULL,
-  description TEXT NOT NULL,
-  duration VARCHAR(50) NOT NULL,
-  level ENUM('Beginner', 'Intermediate', 'Advanced') NOT NULL DEFAULT 'Beginner',
-  price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-  thumbnail VARCHAR(255) NOT NULL,
-  is_active TINYINT(1) NOT NULL DEFAULT 1,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS course_enrolments (
-  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  user_id INT UNSIGNED NOT NULL,
-  course_id INT UNSIGNED NOT NULL,
-  progress_percent TINYINT UNSIGNED NOT NULL DEFAULT 0,
-  status ENUM('active', 'completed') NOT NULL DEFAULT 'active',
-  enrolled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY unique_student_course (user_id, course_id),
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS assignments (
-  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  course_id INT UNSIGNED NOT NULL,
-  title VARCHAR(200) NOT NULL,
-  description TEXT NOT NULL,
-  due_date DATETIME NOT NULL,
-  max_score INT UNSIGNED NOT NULL DEFAULT 100,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS assignment_submissions (
-  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  assignment_id INT UNSIGNED NOT NULL,
-  user_id INT UNSIGNED NOT NULL,
-  file_path VARCHAR(255) NOT NULL,
-  file_name VARCHAR(255) NOT NULL,
-  file_size VARCHAR(50) NOT NULL,
-  comments TEXT DEFAULT NULL,
-  status ENUM('Submitted', 'Graded') NOT NULL DEFAULT 'Submitted',
-  score INT DEFAULT NULL,
-  grade VARCHAR(5) DEFAULT NULL,
-  feedback TEXT DEFAULT NULL,
-  submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  graded_at DATETIME DEFAULT NULL,
-  FOREIGN KEY (assignment_id) REFERENCES assignments(id) ON DELETE CASCADE,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`;
+  const sqlSample = rawDatabaseSql;
 
   const getCustomConfig = (host = simDbHost, name = simDbName, user = simDbUser, pass = simDbPass) => `<?php
 // includes/config.php - Shared Hosting Database Configuration
@@ -223,7 +157,14 @@ Options -Indexes
       zip.file('README.md', `# DevGenius Academy - Automatic Deployment Package\nCompatible with cPanel & DirectAdmin.\nVisit /install.php on your server to auto-configure.`);
 
       // install.php automatic installer script
-      zip.file('install.php', `<?php\n// Automatic Web Installer\nheader('Content-Type: text/html; charset=utf-8');\nrequire_once __DIR__ . '/cpanel_package/install.php';\n`);
+      zip.file('install.php', rawInstallPhp);
+
+      // Also bundle under cpanel_package folder inside the zip for dual support
+      const cpanelPkg = zip.folder('cpanel_package');
+      if (cpanelPkg) {
+        cpanelPkg.file('install.php', rawInstallPhp);
+        cpanelPkg.file('database.sql', rawDatabaseSql);
+      }
 
       // PHP index and core files
       zip.file('index.php', `<?php\nif (!file_exists(__DIR__ . '/installed.lock') && file_exists(__DIR__ . '/install.php')) { header("Location: install.php"); exit; }\nrequire_once __DIR__ . '/includes/header.php';\n?>\n<div class="p-8 text-center"><h1 class="text-2xl font-bold">Welcome to DevGenius Academy</h1><p class="text-sm text-slate-500 mt-2">Shared Hosting Active.</p></div>\n<?php require_once __DIR__ . '/includes/footer.php'; ?>`);

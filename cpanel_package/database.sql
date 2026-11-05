@@ -18,7 +18,7 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- ----------------------------------------------------------------------------
 -- 1. Table structure for table `users`
 -- ----------------------------------------------------------------------------
-CREATE TABLE `users` (
+CREATE TABLE IF NOT EXISTS `users` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `full_name` VARCHAR(150) NOT NULL,
   `email` VARCHAR(191) NOT NULL UNIQUE,
@@ -36,7 +36,7 @@ CREATE TABLE `users` (
 -- ----------------------------------------------------------------------------
 -- 2. Table structure for table `instructors`
 -- ----------------------------------------------------------------------------
-CREATE TABLE `instructors` (
+CREATE TABLE IF NOT EXISTS `instructors` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `name` VARCHAR(150) NOT NULL,
   `role_title` VARCHAR(150) NOT NULL,
@@ -51,7 +51,7 @@ CREATE TABLE `instructors` (
 -- ----------------------------------------------------------------------------
 -- 3. Table structure for table `courses`
 -- ----------------------------------------------------------------------------
-CREATE TABLE `courses` (
+CREATE TABLE IF NOT EXISTS `courses` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `instructor_id` INT UNSIGNED DEFAULT NULL,
   `title` VARCHAR(200) NOT NULL,
@@ -79,7 +79,7 @@ CREATE TABLE `courses` (
 -- ----------------------------------------------------------------------------
 -- 4. Table structure for table `course_enrolments`
 -- ----------------------------------------------------------------------------
-CREATE TABLE `course_enrolments` (
+CREATE TABLE IF NOT EXISTS `course_enrolments` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `user_id` INT UNSIGNED NOT NULL,
   `course_id` INT UNSIGNED NOT NULL,
@@ -98,7 +98,7 @@ CREATE TABLE `course_enrolments` (
 -- ----------------------------------------------------------------------------
 -- 5. Table structure for table `assignments`
 -- ----------------------------------------------------------------------------
-CREATE TABLE `assignments` (
+CREATE TABLE IF NOT EXISTS `assignments` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `course_id` INT UNSIGNED NOT NULL,
   `title` VARCHAR(200) NOT NULL,
@@ -114,7 +114,7 @@ CREATE TABLE `assignments` (
 -- ----------------------------------------------------------------------------
 -- 6. Table structure for table `assignment_submissions`
 -- ----------------------------------------------------------------------------
-CREATE TABLE `assignment_submissions` (
+CREATE TABLE IF NOT EXISTS `assignment_submissions` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `assignment_id` INT UNSIGNED NOT NULL,
   `user_id` INT UNSIGNED NOT NULL,
@@ -140,7 +140,7 @@ CREATE TABLE `assignment_submissions` (
 -- ----------------------------------------------------------------------------
 -- 7. Table structure for table `newsletter_subscribers`
 -- ----------------------------------------------------------------------------
-CREATE TABLE `newsletter_subscribers` (
+CREATE TABLE IF NOT EXISTS `newsletter_subscribers` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `email` VARCHAR(191) NOT NULL UNIQUE,
   `subscribed_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -149,7 +149,7 @@ CREATE TABLE `newsletter_subscribers` (
 -- ----------------------------------------------------------------------------
 -- 8. Table structure for table `announcements`
 -- ----------------------------------------------------------------------------
-CREATE TABLE `announcements` (
+CREATE TABLE IF NOT EXISTS `announcements` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `title` VARCHAR(200) NOT NULL,
   `message` TEXT NOT NULL,
